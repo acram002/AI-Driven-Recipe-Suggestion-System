@@ -207,6 +207,25 @@ def update_preferences(
         }
     }
 
+# Add this with other Pydantic models
+class SuggestionRequest(BaseModel):
+    ingredients: str
+
+# Add this near the bottom with the other routes
+@app.post("/suggest/")
+async def suggest_recipe(
+    request: SuggestionRequest,
+    current_user: User = Depends(get_current_user)
+):
+    return {
+        "recipes": [
+            {"title": "Spaghetti Aglio e Olio", "description": "Simple pasta with garlic, olive oil, and chili flakes."},
+            {"title": "Veggie Stir Fry", "description": "Mixed vegetables sautéed in soy sauce and ginger."},
+            {"title": "Tomato Basil Soup", "description": "Creamy tomato soup with fresh basil and garlic."},
+        ]
+    }
+
+
 @app.post("/logout/")
 async def logout(response: Response):
     response.delete_cookie("access_token")  # ✅ Provide the cookie key
