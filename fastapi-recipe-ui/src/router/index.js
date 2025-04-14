@@ -4,6 +4,7 @@ import Login from "@/views/LoginView.vue";
 import Profile from "@/views/ProfileView.vue";
 import Preferences from "@/views/PreferencesView.vue";
 import Register from "@/views/RegisterView.vue";
+import HistoryView from "@/views/HistoryView.vue";
 import { isAuthenticated } from "@/utils/auth"; // Import the new authentication check
 
 const routes = [
@@ -12,6 +13,7 @@ const routes = [
   { path: "/register", component: Register },
   { path: "/profile", component: Profile, meta: { requiresAuth: true } },
   { path: "/preferences", component: Preferences, meta: { requiresAuth: true } },
+  { path: "/history", component: HistoryView, meta: { requiresAuth: true } },
 ];
 
 const router = createRouter({

@@ -9,6 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Response
 from fastapi import Form
 from fastapi import Response
+from models import Recipe, UserRecipeSuggestion
+from datetime import datetime
 
 Base.metadata.create_all(bind=engine)  # Create tables automatically
 
@@ -215,15 +217,62 @@ class SuggestionRequest(BaseModel):
 @app.post("/suggest/")
 async def suggest_recipe(
     request: SuggestionRequest,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
+    # Fake recipe results (to be replaced later with real model output)
+    fake_results = [
+        {"title": "Spaghetti Aglio e Olio", "description": "Simple pasta with garlic, olive oil, and chili flakes."},
+        {"title": "Veggie Stir Fry", "description": "Mixed vegetables sautéed in soy sauce and ginger."},
+        {"title": "Tomato Basil Soup", "description": "Creamy tomato soup with fresh basil and garlic."},
+    ]
+
+    saved_recipes = []
+    for result in fake_results:
+        # Check if recipe already exists in DB
+        recipe = db.query(Recipe).filter(Recipe.title == result["title"]).first()
+        if not recipe:
+            recipe = Recipe(title=result["title"], description=result["description"])
+            db.add(recipe)
+            db.commit()
+            db.refresh(recipe)
+
+        # Save suggestion to user history
+        suggestion = UserRecipeSuggestion(
+            user_id=current_user.id,
+            recipe_id=recipe.id,
+            ingredients_input=request.ingredients,
+            timestamp=datetime.utcnow()
+        )
+        db.add(suggestion)
+        saved_recipes.append(recipe)
+
+    db.commit()
+
     return {
-        "recipes": [
-            {"title": "Spaghetti Aglio e Olio", "description": "Simple pasta with garlic, olive oil, and chili flakes."},
-            {"title": "Veggie Stir Fry", "description": "Mixed vegetables sautéed in soy sauce and ginger."},
-            {"title": "Tomato Basil Soup", "description": "Creamy tomato soup with fresh basil and garlic."},
-        ]
+        "recipes": [{"title": r.title, "description": r.description} for r in saved_recipes]
     }
+
+@app.get("/user/history/")
+def get_user_suggestion_history(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    history = (
+        db.query(UserRecipeSuggestion)
+        .join(Recipe, Recipe.id == UserRecipeSuggestion.recipe_id)
+        .filter(UserRecipeSuggestion.user_id == current_user.id)
+        .order_by(UserRecipeSuggestion.timestamp.desc())
+        .all()
+    )
+
+    return [
+        {
+            "title": h.recipe.title,
+            "description": h.recipe.description,
+            "ingredients_used": h.ingredients_input,
+            "suggested_at": h.timestamp
+        }
+        for h in history
+    ]
+
 
 
 @app.post("/logout/")

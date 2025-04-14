@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, func
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -24,3 +24,23 @@ class UserPreferences(Base):
     disliked_ingredients = Column(String(255))
 
     user = relationship("User", back_populates="preferences")
+
+
+class Recipe(Base):
+    __tablename__ = "recipes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(255), nullable=False)
+    description = Column(String(255), nullable=False)
+
+class UserRecipeSuggestion(Base):
+    __tablename__ = "user_recipe_suggestions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    recipe_id = Column(Integer, ForeignKey("recipes.id"))
+    ingredients_input = Column(String(255))
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User", backref="recipe_suggestions")
+    recipe = relationship("Recipe")
