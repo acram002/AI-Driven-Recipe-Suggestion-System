@@ -12,9 +12,60 @@ from fastapi import Response
 from models import Recipe, UserRecipeSuggestion
 from datetime import datetime
 
-Base.metadata.create_all(bind=engine)  # Create tables automatically
+from fastapi import FastAPI, Depends
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from datetime import datetime
+from peft import PeftModel, PeftConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+import torch
+
+import requests
+
+print(torch.version.cuda)
+print(torch.cuda.is_available())
+
+
+from fastapi import FastAPI, Depends
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 app = FastAPI()
+
+
+# ✅ STEP 3: Define the input schema
+class SuggestionRequest(BaseModel):
+    ingredients: str
+
+# ✅ STEP 4: Load DeepSeek 7B + your LoRA adapter ONCE
+print("⏳ Loading model...")
+
+# Set model name
+base_model_name = "deepseek-ai/deepseek-llm-7b-base"
+lora_adapter_path = "deepseek-7b-recipe-lora2"  # local or Hugging Face repo
+
+# Load tokenizer
+tokenizer = AutoTokenizer.from_pretrained(base_model_name, trust_remote_code=True)
+
+# Load base model
+base_model = AutoModelForCausalLM.from_pretrained(base_model_name, trust_remote_code=True)
+
+# Apply LoRA adapter
+model = PeftModel.from_pretrained(base_model, lora_adapter_path)
+
+# Move model to appropriate device
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)
+
+print("✅ Model loaded!")
+
+inputs = tokenizer("Suggest a recipe with potatoes and cheese", return_tensors="pt").to("cpu")
+model = model.to("cpu")
+outputs = model.generate(**inputs, max_new_tokens=100)
+print(tokenizer.decode(outputs[0], skip_special_tokens=True))
+
+
 
 # Function to authenticate the user
 def authenticate_user(db: Session, email: str, password: str):
@@ -220,37 +271,59 @@ async def suggest_recipe(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # Fake recipe results (to be replaced later with real model output)
-    fake_results = [
-        {"title": "Spaghetti Aglio e Olio", "description": "Simple pasta with garlic, olive oil, and chili flakes."},
-        {"title": "Veggie Stir Fry", "description": "Mixed vegetables sautéed in soy sauce and ginger."},
-        {"title": "Tomato Basil Soup", "description": "Creamy tomato soup with fresh basil and garlic."},
-    ]
+    model_server_url = "https://fecb-34-105-18-101.ngrok-free.app/generate"  # ✅ Your updated ngrok URL
 
-    saved_recipes = []
-    for result in fake_results:
-        # Check if recipe already exists in DB
-        recipe = db.query(Recipe).filter(Recipe.title == result["title"]).first()
-        if not recipe:
-            recipe = Recipe(title=result["title"], description=result["description"])
-            db.add(recipe)
-            db.commit()
-            db.refresh(recipe)
+    # ✅ Better prompt construction
+    prompt = (
+        "You are a world-class chef. "
+        f"Given the ingredients: {request.ingredients}, "
+        "suggest a creative recipe. Include:\n"
+        "- A catchy recipe title\n"
+        "- A short description\n"
+        "- List of ingredients\n"
+        "- Step-by-step cooking instructions"
+    )
 
-        # Save suggestion to user history
-        suggestion = UserRecipeSuggestion(
-            user_id=current_user.id,
-            recipe_id=recipe.id,
-            ingredients_input=request.ingredients,
-            timestamp=datetime.utcnow()
-        )
-        db.add(suggestion)
-        saved_recipes.append(recipe)
+    payload = {
+        "prompt": prompt,
+        "max_new_tokens": 300  # <-- Allow longer responses
+    }
 
+    try:
+        response = requests.post(model_server_url, json=payload)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Error communicating with model server: {str(e)}")
+
+    generated_text = response.json().get("generated_text", "")
+
+    if not generated_text:
+        raise HTTPException(status_code=500, detail="Empty response from model server")
+
+    # Save generated recipe to database
+    new_recipe = Recipe(
+        title=request.ingredients,  # Optionally, you can extract title if you want smarter DB storage
+        description=generated_text
+    )
+    db.add(new_recipe)
+    db.commit()
+    db.refresh(new_recipe)
+
+    # Save to user's suggestion history
+    suggestion = UserRecipeSuggestion(
+        user_id=current_user.id,
+        recipe_id=new_recipe.id,
+        ingredients_input=request.ingredients,
+        timestamp=datetime.utcnow()
+    )
+    db.add(suggestion)
     db.commit()
 
     return {
-        "recipes": [{"title": r.title, "description": r.description} for r in saved_recipes]
+        "recipes": [{
+            "title": new_recipe.title,
+            "description": new_recipe.description
+        }]
     }
 
 @app.get("/user/history/")

@@ -5,7 +5,7 @@ import Profile from "@/views/ProfileView.vue";
 import Preferences from "@/views/PreferencesView.vue";
 import Register from "@/views/RegisterView.vue";
 import HistoryView from "@/views/HistoryView.vue";
-import { isAuthenticated } from "@/utils/auth"; // Import the new authentication check
+import { useAuthStore } from "@/store/auth"; // ✅ use Pinia store!
 
 const routes = [
   { path: "/", component: Home },
@@ -23,10 +23,12 @@ const router = createRouter({
 
 // Navigation guard to protect routes
 router.beforeEach(async (to, from, next) => {
-  if (to.meta.requiresAuth) {
-    const loggedIn = await isAuthenticated();
-    if (!loggedIn) {
-      return next("/login"); // Redirect to login if not authenticated
+  const auth = useAuthStore(); // 🛡️ use Pinia auth store
+
+  if (to.meta.requiresAuth && !auth.isAuthenticated) {
+    await auth.checkAuth(); // Double-check auth status from server
+    if (!auth.isAuthenticated) {
+      return next("/login"); // Redirect to login
     }
   }
   next();

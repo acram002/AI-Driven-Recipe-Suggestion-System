@@ -36,13 +36,13 @@ export const useAuthStore = defineStore("auth", () => {
   // Logout function
   const logout = async () => {
     try {
-      await api.post("/logout/", {}, { withCredentials: true }); // ✅ Fix: Empty object for request body
+      await api.post("/logout/", {}, { withCredentials: true });
     } catch (error) {
       console.error("Logout failed", error);
+    } finally {
+      isAuthenticated.value = false;
     }
-    isAuthenticated.value = false;
-  };  
-
+  };
   return { isAuthenticated, checkAuth, login, logout };
 
 });
