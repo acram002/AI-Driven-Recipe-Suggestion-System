@@ -12,9 +12,56 @@ from fastapi import Response
 from models import Recipe, UserRecipeSuggestion
 from datetime import datetime
 
+from fastapi import FastAPI, Depends
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from datetime import datetime
+from peft import PeftModel, PeftConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+import torch
+
+print(torch.version.cuda)
+print(torch.cuda.is_available())
+
+
 Base.metadata.create_all(bind=engine)  # Create tables automatically
 
 app = FastAPI()
+
+
+# ✅ STEP 3: Define the input schema
+class SuggestionRequest(BaseModel):
+    ingredients: str
+
+# ✅ STEP 4: Load DeepSeek 7B + your LoRA adapter ONCE
+print("⏳ Loading model...")
+
+# Set model name
+base_model_name = "deepseek-ai/deepseek-llm-7b-base"
+lora_adapter_path = "deepseek-7b-recipe-lora2"  # local or Hugging Face repo
+
+# Load tokenizer
+tokenizer = AutoTokenizer.from_pretrained(base_model_name, trust_remote_code=True)
+
+# Load base model
+base_model = AutoModelForCausalLM.from_pretrained(base_model_name, trust_remote_code=True)
+
+# Apply LoRA adapter
+model = PeftModel.from_pretrained(base_model, lora_adapter_path)
+
+# Move model to appropriate device
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)
+
+print("✅ Model loaded!")
+
+inputs = tokenizer("Suggest a recipe with potatoes and cheese", return_tensors="pt").to("cpu")
+model = model.to("cpu")
+outputs = model.generate(**inputs, max_new_tokens=100)
+print(tokenizer.decode(outputs[0], skip_special_tokens=True))
+
+
 
 # Function to authenticate the user
 def authenticate_user(db: Session, email: str, password: str):
