@@ -1,26 +1,3 @@
-<<<<<<< HEAD
-
-<template>
-  <b-container class="mt-5">
-    <b-row class="justify-content-center">
-      <b-col cols="6">
-        <b-card title="Login" class="shadow">
-          <b-form @submit.prevent="login">
-            <b-form-group label="Email:" label-for="email">
-              <b-form-input id="email" type="email" v-model="email" required></b-form-input>
-            </b-form-group>
-
-            <b-form-group label="Password:" label-for="password">
-              <b-form-input id="password" type="password" v-model="password" required></b-form-input>
-            </b-form-group>
-
-            <b-button type="submit" variant="success" block>Login</b-button>
-          </b-form>
-
-          <b-alert v-if="errorMessage" variant="danger" show class="mt-3">
-            {{ errorMessage }}
-          </b-alert>
-=======
 <template>
   <b-container class="mt-5">
     <b-row class="justify-content-center">
@@ -82,7 +59,6 @@
             {{ errorMessage }}
           </b-alert>
 
->>>>>>> 4c75fa8 (Initial commit with liked-recipes feature)
         </b-card>
       </b-col>
     </b-row>
@@ -107,18 +83,11 @@ const login = async () => {
     await auth.login(email.value, password.value);
     router.push("/profile"); // Redirect after login
   } catch (error) {
-<<<<<<< HEAD
-    errorMessage.value = error.message;
-=======
     errorMessage.value = error.message || "Login failed!";
->>>>>>> 4c75fa8 (Initial commit with liked-recipes feature)
   }
 };
 </script>
 
-<<<<<<< HEAD
-
-=======
 <style scoped>
 .login-card {
   background: white;
@@ -154,4 +123,3 @@ const login = async () => {
   font-size: 1rem;
 }
 </style>
->>>>>>> 4c75fa8 (Initial commit with liked-recipes feature)

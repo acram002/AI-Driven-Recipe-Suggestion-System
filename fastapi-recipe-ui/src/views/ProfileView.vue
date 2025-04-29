@@ -1,15 +1,6 @@
 <template>
   <b-container class="mt-5">
     <b-row class="justify-content-center">
-<<<<<<< HEAD
-      <b-col cols="6">
-        <b-card title="Profile" class="shadow">
-          <b-card-text v-if="user">
-            <p><strong>Name:</strong> {{ user.name }}</p>
-            <p><strong>Email:</strong> {{ user.email }}</p>
-          </b-card-text>
-          <b-alert v-else variant="info" show>Loading...</b-alert>
-=======
       <b-col cols="12" md="8" lg="6">
         <b-card class="shadow-lg p-4 profile-card">
 
@@ -37,7 +28,6 @@
             Loading user data...
           </b-alert>
 
->>>>>>> 4c75fa8 (Initial commit with liked-recipes feature)
         </b-card>
       </b-col>
     </b-row>
@@ -54,26 +44,6 @@ const user = ref(null);
 const router = useRouter();
 
 onMounted(async () => {
-<<<<<<< HEAD
-
-try {
-
-    const response = await api.get("/user/profile/", { withCredentials: true });
-    user.value = response.data;
-
-  } catch (error) {
-
-    if (error.response && error.response.status === 401) {
-      router.push("/login");
-    }
-
-  }
-
-});
-
-
-</script>
-=======
   try {
     const response = await api.get("/user/profile/", { withCredentials: true });
     user.value = response.data;
@@ -131,4 +101,3 @@ h3 {
   font-size: 1.1rem;
 }
 </style>
->>>>>>> 4c75fa8 (Initial commit with liked-recipes feature)

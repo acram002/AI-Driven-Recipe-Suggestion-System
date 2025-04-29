@@ -22,7 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-<<<<<<< HEAD
 
 
 # Ignore model checkpoints and outputs
@@ -30,5 +29,3 @@ deepseek-7b-recipe-lora2/
 offload/
 *.bin
 *.json
-=======
->>>>>>> 4c75fa8 (Initial commit with liked-recipes feature)

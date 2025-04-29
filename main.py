@@ -11,70 +11,11 @@ from fastapi import Form
 from fastapi import Response
 from models import Recipe, UserRecipeSuggestion
 from datetime import datetime
-<<<<<<< HEAD
-
-from fastapi import FastAPI, Depends
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
-from datetime import datetime
-from peft import PeftModel, PeftConfig
-from transformers import AutoModelForCausalLM, AutoTokenizer
-
-import torch
-
-import requests
-
-print(torch.version.cuda)
-print(torch.cuda.is_available())
-
-
-from fastapi import FastAPI, Depends
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
-
-app = FastAPI()
-
-
-# ✅ STEP 3: Define the input schema
-class SuggestionRequest(BaseModel):
-    ingredients: str
-
-# ✅ STEP 4: Load DeepSeek 7B + your LoRA adapter ONCE
-print("⏳ Loading model...")
-
-# Set model name
-base_model_name = "deepseek-ai/deepseek-llm-7b-base"
-lora_adapter_path = "deepseek-7b-recipe-lora2"  # local or Hugging Face repo
-
-# Load tokenizer
-tokenizer = AutoTokenizer.from_pretrained(base_model_name, trust_remote_code=True)
-
-# Load base model
-base_model = AutoModelForCausalLM.from_pretrained(base_model_name, trust_remote_code=True)
-
-# Apply LoRA adapter
-model = PeftModel.from_pretrained(base_model, lora_adapter_path)
-
-# Move model to appropriate device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model.to(device)
-
-print("✅ Model loaded!")
-
-inputs = tokenizer("Suggest a recipe with potatoes and cheese", return_tensors="pt").to("cpu")
-model = model.to("cpu")
-outputs = model.generate(**inputs, max_new_tokens=100)
-print(tokenizer.decode(outputs[0], skip_special_tokens=True))
-
-
-
-=======
 from sqlalchemy import distinct
 Base.metadata.create_all(bind=engine)  # Create tables automatically
 
 app = FastAPI()
 
->>>>>>> 4c75fa8 (Initial commit with liked-recipes feature)
 # Function to authenticate the user
 def authenticate_user(db: Session, email: str, password: str):
     user = db.query(User).filter(User.email == email).first()
@@ -272,73 +213,12 @@ def update_preferences(
 class SuggestionRequest(BaseModel):
     ingredients: str
 
-<<<<<<< HEAD
-# Add this near the bottom with the other routes
-=======
->>>>>>> 4c75fa8 (Initial commit with liked-recipes feature)
 @app.post("/suggest/")
 async def suggest_recipe(
     request: SuggestionRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-<<<<<<< HEAD
-    model_server_url = "https://fecb-34-105-18-101.ngrok-free.app/generate"  # ✅ Your updated ngrok URL
-
-    # ✅ Better prompt construction
-    prompt = (
-        "You are a world-class chef. "
-        f"Given the ingredients: {request.ingredients}, "
-        "suggest a creative recipe. Include:\n"
-        "- A catchy recipe title\n"
-        "- A short description\n"
-        "- List of ingredients\n"
-        "- Step-by-step cooking instructions"
-    )
-
-    payload = {
-        "prompt": prompt,
-        "max_new_tokens": 300  # <-- Allow longer responses
-    }
-
-    try:
-        response = requests.post(model_server_url, json=payload)
-        response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        raise HTTPException(status_code=500, detail=f"Error communicating with model server: {str(e)}")
-
-    generated_text = response.json().get("generated_text", "")
-
-    if not generated_text:
-        raise HTTPException(status_code=500, detail="Empty response from model server")
-
-    # Save generated recipe to database
-    new_recipe = Recipe(
-        title=request.ingredients,  # Optionally, you can extract title if you want smarter DB storage
-        description=generated_text
-    )
-    db.add(new_recipe)
-    db.commit()
-    db.refresh(new_recipe)
-
-    # Save to user's suggestion history
-    suggestion = UserRecipeSuggestion(
-        user_id=current_user.id,
-        recipe_id=new_recipe.id,
-        ingredients_input=request.ingredients,
-        timestamp=datetime.utcnow()
-    )
-    db.add(suggestion)
-    db.commit()
-
-    return {
-        "recipes": [{
-            "title": new_recipe.title,
-            "description": new_recipe.description
-        }]
-    }
-
-=======
     # Fake recipe results (you can replace with real model output later)
     fake_results = [
         {"title": "Spaghetti Aglio e Olio", "description": "Simple pasta with garlic, olive oil, and chili flakes."},
@@ -381,7 +261,6 @@ async def suggest_recipe(
     }
 
 
->>>>>>> 4c75fa8 (Initial commit with liked-recipes feature)
 @app.get("/user/history/")
 def get_user_suggestion_history(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     history = (
@@ -409,8 +288,6 @@ async def logout(response: Response):
     response.delete_cookie("access_token")  # ✅ Provide the cookie key
     return {"message": "Logged out successfully"}
 
-<<<<<<< HEAD
-=======
 
 
 
@@ -524,4 +401,3 @@ def get_disliked_recipes(current_user: User = Depends(get_current_user), db: Ses
         for d in disliked
     ]
 
->>>>>>> 4c75fa8 (Initial commit with liked-recipes feature)
