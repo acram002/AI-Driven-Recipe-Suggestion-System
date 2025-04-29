@@ -29,3 +29,7 @@ deepseek-7b-recipe-lora2/
 offload/
 *.bin
 *.json
+
+
+__pycache__/
+*.pyc
