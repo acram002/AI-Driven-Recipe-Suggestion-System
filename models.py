@@ -41,6 +41,14 @@ class UserRecipeSuggestion(Base):
     recipe_id = Column(Integer, ForeignKey("recipes.id"))
     ingredients_input = Column(String(255))
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
+<<<<<<< HEAD
 
     user = relationship("User", backref="recipe_suggestions")
     recipe = relationship("Recipe")
+=======
+    
+    liked = Column(Integer, nullable=True)  # ✅ 1 for Like, 0 for Dislike, NULL for no action
+
+    user = relationship("User", backref="recipe_suggestions")
+    recipe = relationship("Recipe")
+>>>>>>> 4c75fa8 (Initial commit with liked-recipes feature)

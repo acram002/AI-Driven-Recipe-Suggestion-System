@@ -36,6 +36,7 @@ export const useAuthStore = defineStore("auth", () => {
   // Logout function
   const logout = async () => {
     try {
+<<<<<<< HEAD
       await api.post("/logout/", {}, { withCredentials: true });
     } catch (error) {
       console.error("Logout failed", error);
@@ -43,6 +44,15 @@ export const useAuthStore = defineStore("auth", () => {
       isAuthenticated.value = false;
     }
   };
+=======
+      await api.post("/logout/", {}, { withCredentials: true }); // ✅ Fix: Empty object for request body
+    } catch (error) {
+      console.error("Logout failed", error);
+    }
+    isAuthenticated.value = false;
+  };  
+
+>>>>>>> 4c75fa8 (Initial commit with liked-recipes feature)
   return { isAuthenticated, checkAuth, login, logout };
 
 });
