@@ -34,36 +34,36 @@ from sqlalchemy.orm import Session
 app = FastAPI()
 
 
-# ✅ STEP 3: Define the input schema
-class SuggestionRequest(BaseModel):
-    ingredients: str
+# # ✅ STEP 3: Define the input schema
+# class SuggestionRequest(BaseModel):
+#     ingredients: str
 
-# ✅ STEP 4: Load DeepSeek 7B + your LoRA adapter ONCE
-print("⏳ Loading model...")
+# # ✅ STEP 4: Load DeepSeek 7B + your LoRA adapter ONCE
+# print("⏳ Loading model...")
 
-# Set model name
-base_model_name = "deepseek-ai/deepseek-llm-7b-base"
-lora_adapter_path = "deepseek-7b-recipe-lora2"  # local or Hugging Face repo
+# # Set model name
+# base_model_name = "deepseek-ai/deepseek-llm-7b-base"
+# lora_adapter_path = "deepseek-7b-recipe-lora2"  # local or Hugging Face repo
 
-# Load tokenizer
-tokenizer = AutoTokenizer.from_pretrained(base_model_name, trust_remote_code=True)
+# # Load tokenizer
+# tokenizer = AutoTokenizer.from_pretrained(base_model_name, trust_remote_code=True)
 
-# Load base model
-base_model = AutoModelForCausalLM.from_pretrained(base_model_name, trust_remote_code=True)
+# # Load base model
+# base_model = AutoModelForCausalLM.from_pretrained(base_model_name, trust_remote_code=True)
 
-# Apply LoRA adapter
-model = PeftModel.from_pretrained(base_model, lora_adapter_path)
+# # Apply LoRA adapter
+# model = PeftModel.from_pretrained(base_model, lora_adapter_path)
 
-# Move model to appropriate device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model.to(device)
+# # Move model to appropriate device
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# model.to(device)
 
-print("✅ Model loaded!")
+# print("✅ Model loaded!")
 
-inputs = tokenizer("Suggest a recipe with potatoes and cheese", return_tensors="pt").to("cpu")
-model = model.to("cpu")
-outputs = model.generate(**inputs, max_new_tokens=100)
-print(tokenizer.decode(outputs[0], skip_special_tokens=True))
+# inputs = tokenizer("Suggest a recipe with potatoes and cheese", return_tensors="pt").to("cpu")
+# model = model.to("cpu")
+# outputs = model.generate(**inputs, max_new_tokens=100)
+# print(tokenizer.decode(outputs[0], skip_special_tokens=True))
 
 
 
@@ -271,7 +271,7 @@ async def suggest_recipe(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    model_server_url = "https://fecb-34-105-18-101.ngrok-free.app/generate"  # ✅ Your updated ngrok URL
+    model_server_url = "https://2e59-35-247-163-181.ngrok-free.app/generate"  # ✅ Your updated ngrok URL
 
     # ✅ Better prompt construction
     prompt = (
