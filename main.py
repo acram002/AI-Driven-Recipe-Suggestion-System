@@ -326,6 +326,7 @@ async def suggest_recipe(
         }]
     }
 
+
 @app.get("/user/history/")
 def get_user_suggestion_history(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     history = (
@@ -352,4 +353,117 @@ def get_user_suggestion_history(current_user: User = Depends(get_current_user), 
 async def logout(response: Response):
     response.delete_cookie("access_token")  # ✅ Provide the cookie key
     return {"message": "Logged out successfully"}
+
+
+
+
+from pydantic import BaseModel
+
+class LikeDislikeRequest(BaseModel):
+    suggestion_id: int
+    liked: bool  # True for Like, False for Dislike
+
+from sqlalchemy import and_
+
+@app.post("/suggestion/feedback/")
+def give_feedback(
+    feedback: LikeDislikeRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Find the suggestion
+    suggestion = db.query(UserRecipeSuggestion).filter(
+        UserRecipeSuggestion.id == feedback.suggestion_id,
+        UserRecipeSuggestion.user_id == current_user.id
+    ).first()
+
+    if not suggestion:
+        raise HTTPException(status_code=404, detail="Suggestion not found")
+
+    # Fetch if already liked
+    already_liked = db.query(UserRecipeSuggestion).filter(
+        and_(
+            UserRecipeSuggestion.recipe_id == suggestion.recipe_id,
+            UserRecipeSuggestion.user_id == current_user.id,
+            UserRecipeSuggestion.liked == 1
+        )
+    ).first()
+
+    if feedback.liked:
+        if already_liked:
+            # ✅ Already liked: do nothing, don't duplicate
+            return {"message": "Already liked"}
+        else:
+            # ✅ Update current suggestion
+            suggestion.liked = 1
+            db.commit()
+            db.refresh(suggestion)
+            return {"message": "Recipe liked successfully"}
+    else:
+        # ✅ Dislike
+        suggestion.liked = 0
+        db.commit()
+        db.refresh(suggestion)
+        return {"message": "Recipe disliked successfully"}
+
+
+
+@app.get("/user/liked_recipes/")
+def get_liked_recipes(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    liked = (
+        db.query(UserRecipeSuggestion)
+        .join(Recipe, Recipe.id == UserRecipeSuggestion.recipe_id)
+        .filter(UserRecipeSuggestion.user_id == current_user.id, UserRecipeSuggestion.liked == 1)
+        .all()
+    )
+
+    return [
+        {
+            "suggestion_id": l.id,
+            "title": l.recipe.title,
+            "description": l.recipe.description,
+            "ingredients_used": l.ingredients_input,
+            "suggested_at": l.timestamp
+        }
+        for l in liked
+    ]
+
+
+
+
+from sqlalchemy import func
+
+@app.get("/user/disliked_recipes/")
+def get_disliked_recipes(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # ✅ Step 1: Get latest feedback for each recipe for this user
+    subquery = (
+        db.query(
+            UserRecipeSuggestion.recipe_id,
+            func.max(UserRecipeSuggestion.timestamp).label("max_time")
+        )
+        .filter(UserRecipeSuggestion.user_id == current_user.id)
+        .group_by(UserRecipeSuggestion.recipe_id)
+        .subquery()
+    )
+
+    # ✅ Step 2: Now find actual records matching these latest feedback
+    disliked = (
+        db.query(UserRecipeSuggestion)
+        .join(subquery, (UserRecipeSuggestion.recipe_id == subquery.c.recipe_id) & (UserRecipeSuggestion.timestamp == subquery.c.max_time))
+        .join(Recipe, Recipe.id == UserRecipeSuggestion.recipe_id)
+        .filter(UserRecipeSuggestion.liked == 0)  # ✅ Only the latest feedback being dislike
+        .all()
+    )
+
+    # ✅ Step 3: Return clean results
+    return [
+        {
+            "suggestion_id": d.id,
+            "title": d.recipe.title,
+            "description": d.recipe.description,
+            "ingredients_used": d.ingredients_input,
+            "suggested_at": d.timestamp
+        }
+        for d in disliked
+    ]
 
