@@ -271,7 +271,7 @@ async def suggest_recipe(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    model_server_url = "https://2e59-35-247-163-181.ngrok-free.app/generate"  # ✅ Your updated ngrok URL
+    model_server_url = "https://a993-35-240-146-197.ngrok-free.app/generate"  # ✅ Your updated ngrok URL
 
     # ✅ Better prompt construction
     prompt = (
@@ -322,7 +322,8 @@ async def suggest_recipe(
     return {
         "recipes": [{
             "title": new_recipe.title,
-            "description": new_recipe.description
+            "description": new_recipe.description,
+            "recipe_id": new_recipe.id
         }]
     }
 

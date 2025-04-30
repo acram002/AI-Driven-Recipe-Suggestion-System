@@ -1,6 +1,9 @@
 <template>
+
   <b-navbar toggleable="lg" type="light" variant="light" class="shadow-sm mb-4" style="background: linear-gradient(to right, #74ebd5, #ACB6E5);">
+    
     <b-container>
+
       <!-- App Name -->
       <b-navbar-brand to="/" tag="router-link" class="brand-title">
         🍽️ AIRecipe
@@ -9,6 +12,7 @@
       <b-navbar-toggle target="nav-collapse" />
 
       <b-collapse id="nav-collapse" is-nav>
+
         <b-navbar-nav class="ml-auto d-flex align-items-center justify-content-end" style="width: 100%;">
           
           <!-- Public Links -->
@@ -30,20 +34,46 @@
 
           <!-- Logout Button -->
           <template v-if="auth.isAuthenticated">
-            <button class="nav-btn btn-logout ml-2" @click="auth.logout">
+
+            <button class="nav-btn btn-logout ml-2" @click="handleLogout">
               🔴 Logout
             </button>
+
           </template>
 
         </b-navbar-nav>
+
       </b-collapse>
+
     </b-container>
+
   </b-navbar>
+
 </template>
 
 <script setup>
-import { useAuthStore } from '@/store/auth'
-const auth = useAuthStore()
+
+import {
+  BContainer,
+  BNavbar
+} from 'bootstrap-vue-next'
+
+
+import { onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { useAuthStore } from "@/store/auth";
+
+const auth = useAuthStore();
+const router = useRouter();
+
+onMounted(auth.checkAuth);
+
+// Handle logout with redirection
+const handleLogout = async () => {
+  await auth.logout();
+  router.push("/login");
+};
+
 </script>
 
 <style scoped>
