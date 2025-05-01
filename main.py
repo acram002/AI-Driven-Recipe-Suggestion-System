@@ -271,22 +271,36 @@ async def suggest_recipe(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    model_server_url = "https://a993-35-240-146-197.ngrok-free.app/generate"  # ✅ Your updated ngrok URL
+    model_server_url = "https://f48d-35-230-120-101.ngrok-free.app/generate"
 
-    # ✅ Better prompt construction
+    stop_phrases = [
+        "Note:", "Enjoy!", "submitted by", "Serves", "Source",
+        "let me know", "Thanks for visiting", ".com", "@", "Photo credit"
+    ]
+
+    # 👤 User identifier (if available)
+    user_tag = f"User: {current_user.name}" if hasattr(current_user, "name") else "User"
+
+    # 📜 Prompt: clear, structured, and tag-delimited
     prompt = (
-        "You are a world-class chef. "
-        f"Given the ingredients: {request.ingredients}, "
-        "suggest a creative recipe. Include:\n"
-        "- A catchy recipe title\n"
-        "- A short description\n"
-        "- List of ingredients\n"
-        "- Step-by-step cooking instructions"
+        f"<|user|>\n{user_tag}\n"
+        f"Generate a structured recipe using ONLY these ingredients: {request.ingredients}. "
+        "Only provide:\n"
+        "- A recipe title\n"
+        "- Ingredients list\n"
+        "- Step-by-step instructions\n"
+        "<|assistant|>"
     )
 
+    # 🧠 Generation settings
     payload = {
         "prompt": prompt,
-        "max_new_tokens": 300  # <-- Allow longer responses
+        "max_new_tokens": 300,
+        "do_sample": True,
+        "top_k": 40,
+        "top_p": 0.92,
+        "temperature": 0.7,
+        "repetition_penalty": 1.15
     }
 
     try:
@@ -295,21 +309,29 @@ async def suggest_recipe(
     except requests.exceptions.RequestException as e:
         raise HTTPException(status_code=500, detail=f"Error communicating with model server: {str(e)}")
 
-    generated_text = response.json().get("generated_text", "")
+    generated_text = response.json().get("generated_text", "").strip()
 
     if not generated_text:
         raise HTTPException(status_code=500, detail="Empty response from model server")
 
-    # Save generated recipe to database
+    # 🧹 Extract just the assistant reply
+    recipe = generated_text.split("<|assistant|>")[-1].strip()
+
+    # 🚫 Remove stop phrases (truncation cleanup)
+    for phrase in stop_phrases:
+        if phrase in recipe:
+            recipe = recipe.split(phrase)[0].strip()
+
+    # 📝 Save the generated recipe
     new_recipe = Recipe(
-        title=request.ingredients,  # Optionally, you can extract title if you want smarter DB storage
-        description=generated_text
+        title=request.ingredients[:100],  # Placeholder title or parse one from `recipe` if needed
+        description=recipe
     )
     db.add(new_recipe)
     db.commit()
     db.refresh(new_recipe)
 
-    # Save to user's suggestion history
+    # 📌 Log suggestion
     suggestion = UserRecipeSuggestion(
         user_id=current_user.id,
         recipe_id=new_recipe.id,
@@ -372,16 +394,16 @@ def give_feedback(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # Find the suggestion
+    # Find the suggestion by recipe ID + user ID
     suggestion = db.query(UserRecipeSuggestion).filter(
-        UserRecipeSuggestion.id == feedback.suggestion_id,
+        UserRecipeSuggestion.recipe_id == feedback.suggestion_id,
         UserRecipeSuggestion.user_id == current_user.id
     ).first()
 
     if not suggestion:
         raise HTTPException(status_code=404, detail="Suggestion not found")
 
-    # Fetch if already liked
+    # Check if the recipe was already liked by this user
     already_liked = db.query(UserRecipeSuggestion).filter(
         and_(
             UserRecipeSuggestion.recipe_id == suggestion.recipe_id,
@@ -392,20 +414,16 @@ def give_feedback(
 
     if feedback.liked:
         if already_liked:
-            # ✅ Already liked: do nothing, don't duplicate
             return {"message": "Already liked"}
-        else:
-            # ✅ Update current suggestion
-            suggestion.liked = 1
-            db.commit()
-            db.refresh(suggestion)
-            return {"message": "Recipe liked successfully"}
+        suggestion.liked = 1
     else:
-        # ✅ Dislike
         suggestion.liked = 0
-        db.commit()
-        db.refresh(suggestion)
-        return {"message": "Recipe disliked successfully"}
+
+    db.add(suggestion)
+    db.commit()
+    db.refresh(suggestion)
+
+    return {"message": f"Recipe {'liked' if feedback.liked else 'disliked'} successfully"}
 
 
 
@@ -413,21 +431,25 @@ def give_feedback(
 def get_liked_recipes(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     liked = (
         db.query(UserRecipeSuggestion)
-        .join(Recipe, Recipe.id == UserRecipeSuggestion.recipe_id)
-        .filter(UserRecipeSuggestion.user_id == current_user.id, UserRecipeSuggestion.liked == 1)
+        .filter(
+            UserRecipeSuggestion.user_id == current_user.id,
+            UserRecipeSuggestion.liked == 1
+        )
+        .order_by(UserRecipeSuggestion.timestamp.desc())  # sort newest first
         .all()
     )
 
     return [
         {
             "suggestion_id": l.id,
-            "title": l.recipe.title,
-            "description": l.recipe.description,
+            "title": l.recipe.title if l.recipe else "Unknown",
+            "description": l.recipe.description if l.recipe else "",
             "ingredients_used": l.ingredients_input,
             "suggested_at": l.timestamp
         }
         for l in liked
     ]
+
 
 
 

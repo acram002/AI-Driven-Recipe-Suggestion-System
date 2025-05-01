@@ -41,8 +41,8 @@ class UserRecipeSuggestion(Base):
     recipe_id = Column(Integer, ForeignKey("recipes.id"))
     ingredients_input = Column(String(255))
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
-    
-    liked = Column(Integer, nullable=True)  # ✅ 1 for Like, 0 for Dislike, NULL for no action
+    liked = Column(Integer, nullable=True)  # 1 = Like, 0 = Dislike, NULL = not rated
 
     user = relationship("User", backref="recipe_suggestions")
-    recipe = relationship("Recipe")
+    recipe = relationship("Recipe", lazy="joined")  # ✅ Eager-load recipe info
+

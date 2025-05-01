@@ -150,7 +150,7 @@ const likeRecipe = async (index) => {
 // Dislike a recipe
 const dislikeRecipe = async (index) => {
   try {
-    const suggestionId = results.value[index].suggestion_id
+    const suggestionId = results.value[index].recipe_id
     const res = await api.post('/suggestion/feedback/', {
       suggestion_id: suggestionId,
       liked: false
