@@ -269,7 +269,7 @@ async def suggest_recipe(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    model_server_url = "https://f48d-35-230-120-101.ngrok-free.app/generate"
+    model_server_url = "https://149a-34-125-16-126.ngrok-free.app/generate"
 
     stop_phrases = [
         "Note:", "Enjoy!", "submitted by", "Serves", "Source",

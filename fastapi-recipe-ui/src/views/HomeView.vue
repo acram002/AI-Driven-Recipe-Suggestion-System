@@ -81,14 +81,21 @@ import {
 
 import { ref } from 'vue'
 import api from '@/api'
+import { onMounted } from "vue";
 
 const ingredientInput = ref('')
+const ingredientsList = ref([])
 const results = ref([])
 
 const popupMessage = ref('')
 const popupType = ref('') // 'success' or 'error'
 
 const loading = ref(false)
+
+onMounted(async () => {
+  const res = await fetch('/large_common_ingredients.json')
+  ingredientsList.value = await res.json()
+})
 
 const showPopup = (message, type = 'success') => {
   popupMessage.value = message
@@ -100,8 +107,47 @@ const showPopup = (message, type = 'success') => {
   }, 3000)
 }
 
+const isValidFoodIngredientInput = (input) => {
+  const ingredients = input
+    .split(',')
+    .map(i => i.trim().toLowerCase())
+    .filter(i => i)
+
+  if (ingredients.length < 2) return false
+
+  return ingredients.every(ing => ingredientsList.value.includes(ing))
+}
+
+const isValidIngredientInput = (input) => {
+
+  
+  const ingredients = input.split(',').map(i => i.trim()).filter(i => i)
+
+  // Require at least 2 comma-separated ingredients
+  if (ingredients.length < 2) return false
+
+  // Each ingredient must be a single word (letters only, no spaces)
+  const valid = ingredients.every(ing => /^[a-zA-Z]+$/.test(ing))
+
+  return valid
+  
+}
+
+
+
+
 // Fetch recipe suggestions
 const getSuggestions = async () => {
+
+  if (!isValidIngredientInput(ingredientInput.value)) {
+    showPopup('Please enter valid ingredients separated by commas (e.g., Tomato, Pasta)', 'error')
+    return
+  }
+
+  if (!isValidFoodIngredientInput(ingredientInput.value)) {
+    showPopup('Please enter valid food ingredients', 'error')
+    return
+  }
 
   try {
 
